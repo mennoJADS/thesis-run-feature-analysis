@@ -29,14 +29,13 @@ class RunExplorer():
         self.runTwoDuration = self.endRunTwo - self.startRunTwo
         self.runThreeDuration = self.endRunThree - self.startRunThree
         self.runFourDuration = self.endRunFour - self.startRunFour
-     
+
     # QUALITY AND CORRRECTIONS
 
-    def getLimbQuality(self, limb, startRun=None, endRun=None):
-        limb = self.getLimbSelection(limb)
-        limb = limb[startRun:endRun]
-        return 1-(limb['limbScore'].isna().sum()/limb.shape[0])
-
+    def getKeypointQuality(self, keyPoint, startRun=None, endRun=None):
+        keyPoint = self.getKeypointSelection(keyPoint)
+        keyPoint = keyPoint[startRun:endRun]
+        return 1-(keyPoint['keyPointScore'].isna().sum()/keyPoint.shape[0])
 
     def readFile(self, filename):
         """Read CSV (comma-separated) file into DataFrame.
@@ -52,7 +51,7 @@ class RunExplorer():
             The DataFrame that was extracted from the csv file.
         """
         columnNames = ["fileIndex", "frameIndex",
-                            "limbIndex", "limbX", "limbY", "limbScore"]
+                       "keyPointIndex", "keyPointX", "keyPointY", "keyPointScore"]
         return pd.read_csv(filename, names=columnNames)
 
     def replaceMinusOneWithNan(self):
@@ -66,28 +65,27 @@ class RunExplorer():
 
         return self.df.replace(-1, np.nan)
 
-
     def getStartFrame(self):
         startFrame = self.startIndex.frameIndex
         return startFrame
 
     def getStartX(self):
-        startX = self.startIndex.limbX
+        startX = self.startIndex.keyPointX
         return startX
 
-    def leftRightComparison(self, RLimb, LLimb, axis):
+    def leftRightComparison(self, RKeypoint, LKeypoint, axis):
         if axis == 'X':
-            hipR = self.getLimbSelection(RLimb)['X_rot']
-            hipL = self.getLimbSelection(LLimb)['X_rot']
+            hipR = self.getKeypointSelection(RKeypoint)['X_rot']
+            hipL = self.getKeypointSelection(LKeypoint)['X_rot']
         if axis == 'Y':
-            hipR = self.getLimbSelection(RLimb)['Y_rot']
-            hipL = self.getLimbSelection(LLimb)['Y_rot']
+            hipR = self.getKeypointSelection(RKeypoint)['Y_rot']
+            hipL = self.getKeypointSelection(LKeypoint)['Y_rot']
         return hipR, hipL
 
-    def LRComparisonLeftSideVisible(self, RLimb, LLimb, axis):
+    def LRComparisonLeftSideVisible(self, RKeypoint, LKeypoint, axis):
         if axis == 'X':
-            hipR = self.getLimbSelection(RLimb)['X_rot']
-            hipL = self.getLimbSelection(LLimb)['X_rot']
+            hipR = self.getKeypointSelection(RKeypoint)['X_rot']
+            hipL = self.getKeypointSelection(LKeypoint)['X_rot']
             hipR1 = hipR[self.startRunOne:self.endRunOne]
             hipR3 = hipR[self.startRunThree:self.endRunThree]
             hipL1 = hipL[self.startRunOne:self.endRunOne]
@@ -95,10 +93,10 @@ class RunExplorer():
 
         return hipR1, hipR3, hipL1, hipL3
 
-    def LRComparisonRightSideVisible(self, RLimb, LLimb, axis):
+    def LRComparisonRightSideVisible(self, RKeypoint, LKeypoint, axis):
         if axis == 'X':
-            hipR = self.getLimbSelection(RLimb)['X_rot']
-            hipL = self.getLimbSelection(LLimb)['X_rot']
+            hipR = self.getKeypointSelection(RKeypoint)['X_rot']
+            hipL = self.getKeypointSelection(LKeypoint)['X_rot']
             hipR2 = hipR[self.startRunTwo:self.endRunTwo]
             hipR4 = hipR[self.startRunFour:self.endRunFour]
             hipL2 = hipL[self.startRunTwo:self.endRunTwo]
@@ -107,22 +105,23 @@ class RunExplorer():
         return hipR2, hipR4, hipL2, hipL4
 
     def horizontalCorrection(self):
-        ankle = self.getLimbSelection('Rank')
-        startYValue = ankle.iloc[0].limbY
-        startX = ankle.iloc[0].limbX
+        ankle = self.getKeypointSelection('Rank')
+        startYValue = ankle.iloc[0].keyPointY
+        startX = ankle.iloc[0].keyPointX
         middleOfMovie = 1080 - ankle
         # select middle image 120 pixel range
-        middleAnkle = ankle[(ankle['limbX'] > 900) & (ankle['limbX'] < 1020)]
+        middleAnkle = ankle[(ankle['keyPointX'] > 900) &
+                            (ankle['keyPointX'] < 1020)]
         minimaIndexes = find_peaks_cwt(
-            (1080 - middleAnkle['limbY']), np.arange(1, 20))
+            (1080 - middleAnkle['keyPointY']), np.arange(1, 20))
         minimumYValue = 1080
         xValue = startX
 
         for i in minimaIndexes:
-            frameYValue = middleAnkle.iloc[i].limbY
+            frameYValue = middleAnkle.iloc[i].keyPointY
             if frameYValue < minimumYValue:
                 minimumYValue = frameYValue
-                xValue = middleAnkle.iloc[i].limbX
+                xValue = middleAnkle.iloc[i].keyPointX
 
         oppositeSide = abs(startYValue-minimumYValue)
         adjacentSide = abs(startX - xValue)
@@ -142,16 +141,16 @@ class RunExplorer():
 
         rotated_df = self.df
 
-        rotated_df['X_rot'] = rotated_df['limbX'] * c - rotated_df['limbY'] * s
-        rotated_df['Y_rot'] = rotated_df['limbX'] * s + rotated_df['limbY'] * c
+        rotated_df['X_rot'] = rotated_df['keyPointX'] * \
+            c - rotated_df['keyPointY'] * s
+        rotated_df['Y_rot'] = rotated_df['keyPointX'] * \
+            s + rotated_df['keyPointY'] * c
 
         return rotated_df
 
-
-
     def findTurningPoints(self):
-        Rhip = self.getLimbSelection('Rhip')
-        Lhip = self.getLimbSelection('Lhip')
+        Rhip = self.getKeypointSelection('Rhip')
+        Lhip = self.getKeypointSelection('Lhip')
         hips = pd.concat([Rhip, Lhip], axis=1, sort=False)
         hips['center'] = hips['X_rot'].mean(axis=1)
         x = hips['center'].shift(-7).rolling(15).median()
@@ -204,42 +203,41 @@ class RunExplorer():
         self.endXVal = hips.iloc[(self.endRunTwo)].center
 
     def changeCoordinateSystem(self):
-        self.df['limbY'] = 1080 - self.df['limbY']
+        self.df['keyPointY'] = 1080 - self.df['keyPointY']
         return self.df
 
-    def getLimbSelection(self, limbOfInterest):
-        """Private method that selects only those rows of a dataframe that belong to a certain limb
+    def getKeypointSelection(self, keyPointOfInterest):
+        """Private method that selects only those rows of a dataframe that belong to a certain keyPoint
 
         """
-        #List of limbs 
-        limbs = ["nose", "neck", "Rsho", "Relb", "Rwri", "Lsho", "Lelb", "Lwri", "Rhip",
-                 "Rkne", "Rank", "Lhip", "Lkne", "Lank", "Reye", "Leye", "Rear", "Lear"]
-        #Find the index of the limb of interest
-        limbIndex = limbs.index(limbOfInterest)
-        #Filter the dataframe to on the limb
-        limbDF = self.df[self.df.limbIndex == limbIndex]
-        #Reset the index of the df to match the limb
-        limbDF = limbDF.reset_index(drop=True)
-        return limbDF
+        # List of keyPoints
+        keyPoints = ["nose", "neck", "Rsho", "Relb", "Rwri", "Lsho", "Lelb", "Lwri", "Rhip",
+                     "Rkne", "Rank", "Lhip", "Lkne", "Lank", "Reye", "Leye", "Rear", "Lear"]
+        # Find the index of the keyPoint of interest
+        keyPointIndex = keyPoints.index(keyPointOfInterest)
+        # Filter the dataframe to on the keyPoint
+        keyPointDF = self.df[self.df.keyPointIndex == keyPointIndex]
+        # Reset the index of the df to match the keyPoint
+        keyPointDF = keyPointDF.reset_index(drop=True)
+        return keyPointDF
 
     def getFileQuality(self):
-        return 1-(self.df['limbScore'].isna().sum()/self.df.shape[0])
+        return 1-(self.df['keyPointScore'].isna().sum()/self.df.shape[0])
 
-    def getEnd(self, limb):
-        limbSelection = self.getLimbSelection(limb)
+    def getEnd(self, keyPoint):
+        keyPointSelection = self.getKeypointSelection(keyPoint)
         try:
-            end = limbSelection[(limbSelection['limbX'] > self.startX) & (
-                limbSelection['frameIndex'] > 800)].iloc[0].frameIndex
+            end = keyPointSelection[(keyPointSelection['keyPointX'] > self.startX) & (
+                keyPointSelection['frameIndex'] > 800)].iloc[0].frameIndex
         except IndexError:
-            end = limbSelection.shape[0]
+            end = keyPointSelection.shape[0]
         return end
-  
 
     """
     The remaing functions are deticated to the features described in chapter 4.
     Section 4.8 of the thesis also dives into these as well
     """
-   
+
     def bodyLength(self):
         """Calculate the body length of the athlete. 
 
@@ -248,11 +246,11 @@ class RunExplorer():
         float
             The length in number of pixels. A float rather than a integer since rotation can cause decimal pixels.
         """
-        #Select the neck
-        neck = self.getLimbSelection('neck')
-        #Select the left ankle
-        ankle = self.getLimbSelection('Lank')
-        #Calclate the body length as the median observation of the first twenty frames.
+        # Select the neck
+        neck = self.getKeypointSelection('neck')
+        # Select the left ankle
+        ankle = self.getKeypointSelection('Lank')
+        # Calclate the body length as the median observation of the first twenty frames.
         bodyLength = ((neck['Y_rot'][0:20]) - (ankle['Y_rot'][:20])).median()
         return bodyLength
 
@@ -264,39 +262,37 @@ class RunExplorer():
         float
             The length in number of pixels. A float rather than a integer since rotation can cause decimal pixels.
         """
-        #Select the left hip
-        hip = self.getLimbSelection('Lhip')
-        #Select the left ankle
-        ankle = self.getLimbSelection('Lank')
-        #Calclate the leg length as the median observation of the first twenty frames.
+        # Select the left hip
+        hip = self.getKeypointSelection('Lhip')
+        # Select the left ankle
+        ankle = self.getKeypointSelection('Lank')
+        # Calclate the leg length as the median observation of the first twenty frames.
         legLength = ((hip['Y_rot'][0:20]) - (ankle['Y_rot'][:20])).median()
         return legLength
 
+    def verticalDisplacementDeviation(self, keyPoint, startFrame=None, endFrame=None,  visualize=False):
+        """Calculate the vertical displacement of a keyPoint as the standard deviation of the signal. 
 
-    def verticalDisplacementDeviation(self, limb, startFrame=None, endFrame=None,  visualize=False):
-        """Calculate the vertical displacement of a limb as the standard deviation of the signal. 
-        
         Returns
         -------
         float
-            The standard deviation of the vertical postion of the limb. 
+            The standard deviation of the vertical postion of the keyPoint. 
         """
-        limbSelection = self.getLimbSelection(limb)
-        limbSelection = limbSelection.interpolate()
+        keyPointSelection = self.getKeypointSelection(keyPoint)
+        keyPointSelection = keyPointSelection.interpolate()
         if startFrame is not None and endFrame is not None:
-            limbSelection = limbSelection[
-            (limbSelection['frameIndex'] >= startFrame) & 
-            (limbSelection['frameIndex'] <= endFrame)]
+            keyPointSelection = keyPointSelection[
+                (keyPointSelection['frameIndex'] >= startFrame) &
+                (keyPointSelection['frameIndex'] <= endFrame)]
         else:
-            limbSelection = limbSelection[
-            (limbSelection['frameIndex'] >= self.startFrame) & 
-            (limbSelection['frameIndex'] <= self.endFrame)]
-        verticalDisplacement = limbSelection['Y_rot'].std()
+            keyPointSelection = keyPointSelection[
+                (keyPointSelection['frameIndex'] >= self.startFrame) &
+                (keyPointSelection['frameIndex'] <= self.endFrame)]
+        verticalDisplacement = keyPointSelection['Y_rot'].std()
         if visualize == True:
-            return limbSelection['Y_rot']
+            return keyPointSelection['Y_rot']
         else:
             return float(verticalDisplacement)
-
 
     def neckParabola(self, startFrame, endFrame,  visualize=False):
         """Calculate the leg length of the athlete. 
@@ -307,26 +303,25 @@ class RunExplorer():
             The a*2 value of a in  a x + b, which is the first order derivative of the parabolic function. 
         """
         # Select the neck
-        neck = self.getLimbSelection('neck')
-        # Apply an interpolation function, thereafter shift two and apply a median smoothing filter. 
+        neck = self.getKeypointSelection('neck')
+        # Apply an interpolation function, thereafter shift two and apply a median smoothing filter.
         neck['Y_rot'] = neck['Y_rot'].interpolate().shift(-2).rolling(5).median()
         # Fill nan opbservations with zeros (polyfit does not accept NaN values)
         neck = neck.fillna(0)
         # Make a selection if the start and end of a run are defined
         neck = neck[(neck['frameIndex'] >= startFrame)
                     & (neck['frameIndex'] <= endFrame)]
-        # Select the Y position of the neck as pandas series to use. 
+        # Select the Y position of the neck as pandas series to use.
         neck = neck['Y_rot']
         x = np.arange(0, neck.shape[0])
         fitFunction = np.poly1d(np.polyfit(x, neck, 2))
-        twoA = fitFunction.c[0]*2        
+        twoA = fitFunction.c[0]*2
         if visualize == True:
             f = np.poly1d(fitFunction)
             l = f(x)
             return(x, neck, l)
         else:
             return(twoA)
-
 
     def runPhaseSeperator(self,  startFrame, endFrame,  visualize=False):
         """Seperate the run phases based on a the second order derivative of a polynomial fit. 
@@ -337,17 +332,19 @@ class RunExplorer():
             The index of the end of the acceleration phase.
         """
 
-        # Select the right hip 
-        rHip = self.getLimbSelection('Rhip')
+        # Select the right hip
+        rHip = self.getKeypointSelection('Rhip')
         # Select the left hip
-        lHip = self.getLimbSelection('Lhip')
+        lHip = self.getKeypointSelection('Lhip')
         # Combine both in one dataframe
         hips = pd.concat([rHip, lHip], axis=1, sort=False)
-        # Add a new column 
+        # Add a new column
         hips['center'] = hips['X_rot'].mean(axis=1)
-        hips['center'] = hips['center'].interpolate().shift(-2).rolling(5).median()
+        hips['center'] = hips['center'].interpolate(
+        ).shift(-2).rolling(5).median()
         hips = hips.fillna(0)
-        hips = hips.query('frameIndex >= ' + str(startFrame) + ' and frameIndex <= ' + str(endFrame))
+        hips = hips.query('frameIndex >= ' + str(startFrame) +
+                          ' and frameIndex <= ' + str(endFrame))
         hip = hips['center']
         x = np.arange(0, hip.shape[0])
         p = np.poly1d(np.polyfit(x, hip, 3))
@@ -363,7 +360,6 @@ class RunExplorer():
         else:
             return(phaseEnd)
 
-
     def stepFrequency(self, startRun=None, endRun=None):
         """Calculate the step frequceny based on the most dominant frequency after a fast fourier transform. 
 
@@ -372,14 +368,15 @@ class RunExplorer():
         float
             The most dominant frequency represented as a float. 
         """
-        rHip = self.getLimbSelection('Rhip')
-        lHip = self.getLimbSelection('Lhip')
+        rHip = self.getKeypointSelection('Rhip')
+        lHip = self.getKeypointSelection('Lhip')
         hips = pd.concat([rHip, lHip], axis=1, sort=False)
         hips['center'] = hips['Y_rot'].mean(axis=1)
-        hips['center'] = hips['center'].interpolate().shift(-2).rolling(5).median()
+        hips['center'] = hips['center'].interpolate(
+        ).shift(-2).rolling(5).median()
         hips = hips.fillna(0)
-        hips = hips.query('frameIndex >= ' + str(startRun) +' & '
-            + str(endRun) +' <= frameIndex')
+        hips = hips.query('frameIndex >= ' + str(startRun) + ' & '
+                          + str(endRun) + ' <= frameIndex')
         hip = hips['center']
         sig = hip
         # The FFT of the signal
