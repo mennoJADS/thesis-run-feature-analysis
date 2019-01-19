@@ -12,7 +12,7 @@ from runvisualizer import RunVisualizer
 
 
 filePath = '../data/'
-limbs = ["nose", "neck", "Rsho", "Relb", "Rwri", "Lsho", "Lelb", "Lwri", "Rhip",
+keypoints = ["nose", "neck", "Rsho", "Relb", "Rwri", "Lsho", "Lelb", "Lwri", "Rhip",
          "Rkne", "Rank", "Lhip", "Lkne", "Lank", "Reye", "Leye", "Rear", "Lear"]
 
 
@@ -52,29 +52,29 @@ def fileProcessor(df):
         df.at[index, 'length'] = explorer.bodyLength
         df.at[index, 'legLength'] = explorer.legLength
 
-        for limb in limbs:
-            featureName = limb + '_ver_std'
-            limbQuality = limb + '_qual'
-            limbQuality1 = limb + '_qual1'
-            limbQuality2 = limb + '_qual2'
-            limbQuality3 = limb + '_qual3'
-            limbQuality4 = limb + '_qual4'
+        for keypoint in keypoints:
+            featureName = keypoint + '_ver_std'
+            keypointQuality = keypoint + '_qual'
+            keypointQuality1 = keypoint + '_qual1'
+            keypointQuality2 = keypoint + '_qual2'
+            keypointQuality3 = keypoint + '_qual3'
+            keypointQuality4 = keypoint + '_qual4'
 
-            # Calculate quality scores overall, and per run for this limb.
+            # Calculate quality scores overall, and per run for this keypoint.
             # Support for chapter threee figures
-            df.at[index, limbQuality] = explorer.getLimbQuality(limb)
-            df.at[index, limbQuality1] = explorer.getLimbQuality(
-                limb, explorer.startRunOne, explorer.endRunOne)
-            df.at[index, limbQuality2] = explorer.getLimbQuality(
-                limb, explorer.startRunTwo, explorer.endRunTwo)
-            df.at[index, limbQuality3] = explorer.getLimbQuality(
-                limb, explorer.startRunThree, explorer.endRunThree)
-            df.at[index, limbQuality4] = explorer.getLimbQuality(
-                limb, explorer.startRunFour, explorer.endRunFour)
+            df.at[index, keypointQuality] = explorer.getKeypointQuality(keypoint)
+            df.at[index, keypointQuality1] = explorer.getKeypointQuality(
+                keypoint, explorer.startRunOne, explorer.endRunOne)
+            df.at[index, keypointQuality2] = explorer.getKeypointQuality(
+                keypoint, explorer.startRunTwo, explorer.endRunTwo)
+            df.at[index, keypointQuality3] = explorer.getKeypointQuality(
+                keypoint, explorer.startRunThree, explorer.endRunThree)
+            df.at[index, keypointQuality4] = explorer.getKeypointQuality(
+                keypoint, explorer.startRunFour, explorer.endRunFour)
 
-            # Standard deviation of this limb, discussed in section 4.3
+            # Standard deviation of this keypoint, discussed in section 4.3
             df.at[index, featureName] = explorer.verticalDisplacementDeviation(
-                limb)
+                keypoint)
 
         #Neck parabola feature, discussed in section 4.4
         df.at[index, 'm1'] = explorer.neckParabola(
