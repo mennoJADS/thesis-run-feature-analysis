@@ -32,10 +32,10 @@ class RunExplorer():
 
     # QUALITY AND CORRRECTIONS
 
-    def getKeypointQuality(self, keyPoint, startRun=None, endRun=None):
-        keyPoint = self.getKeypointSelection(keyPoint)
-        keyPoint = keyPoint[startRun:endRun]
-        return 1-(keyPoint['keyPointScore'].isna().sum()/keyPoint.shape[0])
+    def getKeypointQuality(self, keypoint, startRun=None, endRun=None):
+        keypoint = self.getKeypointSelection(keypoint)
+        keypoint = keypoint[startRun:endRun]
+        return 1-(keypoint['keypointScore'].isna().sum()/keypoint.shape[0])
 
     def readFile(self, filename):
         """Read CSV (comma-separated) file into DataFrame.
@@ -51,7 +51,7 @@ class RunExplorer():
             The DataFrame that was extracted from the csv file.
         """
         columnNames = ["fileIndex", "frameIndex",
-                       "keyPointIndex", "keyPointX", "keyPointY", "keyPointScore"]
+                       "keypointIndex", "keypointX", "keypointY", "keypointScore"]
         return pd.read_csv(filename, names=columnNames)
 
     def replaceMinusOneWithNan(self):
@@ -70,7 +70,7 @@ class RunExplorer():
         return startFrame
 
     def getStartX(self):
-        startX = self.startIndex.keyPointX
+        startX = self.startIndex.keypointX
         return startX
 
     def leftRightComparison(self, RKeypoint, LKeypoint, axis):
@@ -106,22 +106,22 @@ class RunExplorer():
 
     def horizontalCorrection(self):
         ankle = self.getKeypointSelection('Rank')
-        startYValue = ankle.iloc[0].keyPointY
-        startX = ankle.iloc[0].keyPointX
+        startYValue = ankle.iloc[0].keypointY
+        startX = ankle.iloc[0].keypointX
         middleOfMovie = 1080 - ankle
         # select middle image 120 pixel range
-        middleAnkle = ankle[(ankle['keyPointX'] > 900) &
-                            (ankle['keyPointX'] < 1020)]
+        middleAnkle = ankle[(ankle['keypointX'] > 900) &
+                            (ankle['keypointX'] < 1020)]
         minimaIndexes = find_peaks_cwt(
-            (1080 - middleAnkle['keyPointY']), np.arange(1, 20))
+            (1080 - middleAnkle['keypointY']), np.arange(1, 20))
         minimumYValue = 1080
         xValue = startX
 
         for i in minimaIndexes:
-            frameYValue = middleAnkle.iloc[i].keyPointY
+            frameYValue = middleAnkle.iloc[i].keypointY
             if frameYValue < minimumYValue:
                 minimumYValue = frameYValue
-                xValue = middleAnkle.iloc[i].keyPointX
+                xValue = middleAnkle.iloc[i].keypointX
 
         oppositeSide = abs(startYValue-minimumYValue)
         adjacentSide = abs(startX - xValue)
@@ -141,10 +141,10 @@ class RunExplorer():
 
         rotated_df = self.df
 
-        rotated_df['X_rot'] = rotated_df['keyPointX'] * \
-            c - rotated_df['keyPointY'] * s
-        rotated_df['Y_rot'] = rotated_df['keyPointX'] * \
-            s + rotated_df['keyPointY'] * c
+        rotated_df['X_rot'] = rotated_df['keypointX'] * \
+            c - rotated_df['keypointY'] * s
+        rotated_df['Y_rot'] = rotated_df['keypointX'] * \
+            s + rotated_df['keypointY'] * c
 
         return rotated_df
 
@@ -203,34 +203,34 @@ class RunExplorer():
         self.endXVal = hips.iloc[(self.endRunTwo)].center
 
     def changeCoordinateSystem(self):
-        self.df['keyPointY'] = 1080 - self.df['keyPointY']
+        self.df['keypointY'] = 1080 - self.df['keypointY']
         return self.df
 
-    def getKeypointSelection(self, keyPointOfInterest):
-        """Private method that selects only those rows of a dataframe that belong to a certain keyPoint
+    def getKeypointSelection(self, keypointOfInterest):
+        """Private method that selects only those rows of a dataframe that belong to a certain keypoint
 
         """
-        # List of keyPoints
-        keyPoints = ["nose", "neck", "Rsho", "Relb", "Rwri", "Lsho", "Lelb", "Lwri", "Rhip",
+        # List of keypoints
+        keypoints = ["nose", "neck", "Rsho", "Relb", "Rwri", "Lsho", "Lelb", "Lwri", "Rhip",
                      "Rkne", "Rank", "Lhip", "Lkne", "Lank", "Reye", "Leye", "Rear", "Lear"]
-        # Find the index of the keyPoint of interest
-        keyPointIndex = keyPoints.index(keyPointOfInterest)
-        # Filter the dataframe to on the keyPoint
-        keyPointDF = self.df[self.df.keyPointIndex == keyPointIndex]
-        # Reset the index of the df to match the keyPoint
-        keyPointDF = keyPointDF.reset_index(drop=True)
-        return keyPointDF
+        # Find the index of the keypoint of interest
+        keypointIndex = keypoints.index(keypointOfInterest)
+        # Filter the dataframe to on the keypoint
+        keypointDF = self.df[self.df.keypointIndex == keypointIndex]
+        # Reset the index of the df to match the keypoint
+        keypointDF = keypointDF.reset_index(drop=True)
+        return keypointDF
 
     def getFileQuality(self):
-        return 1-(self.df['keyPointScore'].isna().sum()/self.df.shape[0])
+        return 1-(self.df['keypointScore'].isna().sum()/self.df.shape[0])
 
-    def getEnd(self, keyPoint):
-        keyPointSelection = self.getKeypointSelection(keyPoint)
+    def getEnd(self, keypoint):
+        keypointSelection = self.getKeypointSelection(keypoint)
         try:
-            end = keyPointSelection[(keyPointSelection['keyPointX'] > self.startX) & (
-                keyPointSelection['frameIndex'] > 800)].iloc[0].frameIndex
+            end = keypointSelection[(keypointSelection['keypointX'] > self.startX) & (
+                keypointSelection['frameIndex'] > 800)].iloc[0].frameIndex
         except IndexError:
-            end = keyPointSelection.shape[0]
+            end = keypointSelection.shape[0]
         return end
 
     """
@@ -270,27 +270,27 @@ class RunExplorer():
         legLength = ((hip['Y_rot'][0:20]) - (ankle['Y_rot'][:20])).median()
         return legLength
 
-    def verticalDisplacementDeviation(self, keyPoint, startFrame=None, endFrame=None,  visualize=False):
-        """Calculate the vertical displacement of a keyPoint as the standard deviation of the signal. 
+    def verticalDisplacementDeviation(self, keypoint, startFrame=None, endFrame=None,  visualize=False):
+        """Calculate the vertical displacement of a keypoint as the standard deviation of the signal. 
 
         Returns
         -------
         float
-            The standard deviation of the vertical postion of the keyPoint. 
+            The standard deviation of the vertical postion of the keypoint. 
         """
-        keyPointSelection = self.getKeypointSelection(keyPoint)
-        keyPointSelection = keyPointSelection.interpolate()
+        keypointSelection = self.getKeypointSelection(keypoint)
+        keypointSelection = keypointSelection.interpolate()
         if startFrame is not None and endFrame is not None:
-            keyPointSelection = keyPointSelection[
-                (keyPointSelection['frameIndex'] >= startFrame) &
-                (keyPointSelection['frameIndex'] <= endFrame)]
+            keypointSelection = keypointSelection[
+                (keypointSelection['frameIndex'] >= startFrame) &
+                (keypointSelection['frameIndex'] <= endFrame)]
         else:
-            keyPointSelection = keyPointSelection[
-                (keyPointSelection['frameIndex'] >= self.startFrame) &
-                (keyPointSelection['frameIndex'] <= self.endFrame)]
-        verticalDisplacement = keyPointSelection['Y_rot'].std()
+            keypointSelection = keypointSelection[
+                (keypointSelection['frameIndex'] >= self.startFrame) &
+                (keypointSelection['frameIndex'] <= self.endFrame)]
+        verticalDisplacement = keypointSelection['Y_rot'].std()
         if visualize == True:
-            return keyPointSelection['Y_rot']
+            return keypointSelection['Y_rot']
         else:
             return float(verticalDisplacement)
 
